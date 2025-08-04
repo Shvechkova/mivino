@@ -1,0 +1,1 @@
+# Клиент для recommendation-service

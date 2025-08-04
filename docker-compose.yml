@@ -1,0 +1,206 @@
+version: '3.8'
+
+services:
+  # === Микросервисы ===
+  
+  wine-service:
+    build:
+      context: ./services/wine-service
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vivino:password@postgres-wine:5432/wine_db
+    depends_on:
+      - postgres-wine
+    restart: unless-stopped
+
+
+  # gateway-service:
+  #   build:
+  #     context: ./services/gateway-service
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - ENV=production
+  #   depends_on:
+  #     - user-service
+  #     - auth-service
+  #     - wine-service
+  #     - review-service
+  #     - search-service
+  #     - recommendation-service
+  #     - media-service
+  #   restart: unless-stopped
+
+  # user-service:
+  #   build:
+  #     context: ./services/user-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - DATABASE_URL=postgresql+asyncpg://vivino:password@postgres-user:5432/user_db
+  #     - REDIS_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - postgres-user
+  #     - redis
+  #   restart: unless-stopped
+
+  # auth-service:
+  #   build:
+  #     context: ./services/auth-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - DATABASE_URL=postgresql+asyncpg://vivino:password@postgres-auth:5432/auth_db
+  #     - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-prod
+  #     - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+  #   depends_on:
+  #     - postgres-auth
+  #   restart: unless-stopped
+
+  # review-service:
+  #   build:
+  #     context: ./services/review-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - DATABASE_URL=postgresql+asyncpg://vivino:password@postgres-review:5432/review_db
+  #     - EVENT_BROKER_URL=amqp://rabbitmq:5672
+  #   depends_on:
+  #     - postgres-review
+  #     - rabbitmq
+  #   restart: unless-stopped
+
+  # search-service:
+  #   build:
+  #     context: ./services/search-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   depends_on:
+  #     - elasticsearch
+  #   restart: unless-stopped
+
+  # recommendation-service:
+  #   build:
+  #     context: ./services/recommendation-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - EVENT_BROKER_URL=amqp://rabbitmq:5672
+  #     - MODEL_PATH=/app/models/recsys_model.pkl
+  #   volumes:
+  #     - ./services/recommendation-service/models:/app/models
+  #   depends_on:
+  #     - rabbitmq
+  #   restart: unless-stopped
+
+  # media-service:
+  #   build:
+  #     context: ./services/media-service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - STORAGE_BACKEND=s3
+  #     - S3_ENDPOINT=http://minio:9000
+  #     - S3_ACCESS_KEY=minioadmin
+  #     - S3_SECRET_KEY=minioadmin
+  #     - S3_BUCKET_NAME=vivino-media
+  #   depends_on:
+  #     - minio
+  #   restart: unless-stopped
+
+  # === Базы данных и инфраструктура ===
+  postgres-wine:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=wine_db
+      - POSTGRES_USER=vivino
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_wine_:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # postgres-user:
+  #   image: postgres:15
+  #   environment:
+  #     - POSTGRES_DB=user_db
+  #     - POSTGRES_USER=vivino
+  #     - POSTGRES_PASSWORD=password
+  #   volumes:
+  #     - postgres_user_/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  # postgres-auth:
+  #   image: postgres:15
+  #   environment:
+  #     - POSTGRES_DB=auth_db
+  #     - POSTGRES_USER=vivino
+  #     - POSTGRES_PASSWORD=password
+  #   volumes:
+  #     - postgres_auth_/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+
+  # postgres-review:
+  #   image: postgres:15
+  #   environment:
+  #     - POSTGRES_DB=review_db
+  #     - POSTGRES_USER=vivino
+  #     - POSTGRES_PASSWORD=password
+  #   volumes:
+  #     - postgres_review_/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "15672:15672"  # Web UI
+      - "5672:5672"    # AMQP
+    restart: unless-stopped
+
+  # elasticsearch:
+  #   image: elasticsearch:8.11.0
+  #   environment:
+  #     - discovery.type=single-node
+  #     - ES_JAVA_OPTS=-Xms512m -Xmx512m
+  #     - xpack.security.enabled=false
+  #   ports:
+  #     - "9200:9200"
+  #   volumes:
+  #     - es_/usr/share/elasticsearch/data
+  #   restart: unless-stopped
+
+  # kibana:
+  #   image: kibana:8.11.0
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   ports:
+  #     - "5601:5601"
+  #   depends_on:
+  #     - elasticsearch
+  #   restart: unless-stopped
+
+  # minio:
+  #   image: minio/minio
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     - MINIO_ROOT_USER=minioadmin
+  #     - MINIO_ROOT_PASSWORD=minioadmin
+  #   ports:
+  #     - "9000:9000"  # S3 API
+  #     - "9001:9001"  # Console
+  #   volumes:
+  #     - minio_/data
+  #   restart: unless-stopped
+
+volumes:
+  postgres_wine_: {}
+  # postgres_user_: {}
+  # postgres_auth_: {}
+  
+  # postgres_review_: {}
+  # es_: {}
+  # minio_: {}

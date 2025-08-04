@@ -1,0 +1,1 @@
+# Клиент для wine-service
